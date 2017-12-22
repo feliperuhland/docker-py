@@ -398,7 +398,8 @@ class ImageApiMixin(object):
         return self._result(response)
 
     def push(self, repository, tag=None, stream=False,
-             insecure_registry=False, auth_config=None, decode=False):
+             insecure_registry=False, auth_config=None, decode=False,
+             check_for_errors=False):
         """
         Push an image or a repository to the registry. Similar to the ``docker
         push`` command.
@@ -413,6 +414,8 @@ class ImageApiMixin(object):
                 :py:meth:`~docker.api.daemon.DaemonApiMixin.login` has set for
                 this request. ``auth_config`` should contain the ``username``
                 and ``password`` keys to be valid.
+            check_for_errors (bool): Raises an exception in case of an error.
+                Default: ``False``
 
         Returns:
             (generator or str): The output from the server.
@@ -460,6 +463,13 @@ class ImageApiMixin(object):
         )
 
         self._raise_for_status(response)
+
+        if check_for_errors:
+            res = self._result(response)
+            if 'authentication required' in res:
+                raise errors.APIError('authentication required')
+
+            return res
 
         if stream:
             return self._stream_helper(response, decode=decode)
